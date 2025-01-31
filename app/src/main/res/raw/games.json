@@ -19,6 +19,18 @@
     "total_rating": 97.13895178905847
   },
   {
+    "id": 0,
+    "cover": -1,
+    "first_release_date": 0,
+    "genres": [
+    ],
+    "name": "Test not found",
+    "platforms": [
+    ],
+    "summary": "For testing the not found cover",
+    "total_rating": 0
+  },
+  {
     "id": 28013,
     "cover": 232279,
     "first_release_date": 1513036800,
