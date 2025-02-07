@@ -47,7 +47,7 @@ data class Cover(val id: Long, val url: String)
 data class Games(val id: Long,
                  val cover: Long,
                 val first_release_date: Long,
-                val genres: List<Int>,
+                val genres: List<Long>,
                 val name: String,
                 val platforms: List<Int>,
                 val summary: String,

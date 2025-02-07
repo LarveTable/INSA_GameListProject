@@ -37,16 +37,25 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.rememberNavController
 import coil3.compose.AsyncImage
 import com.insa.mygamelist.data.Cover
-import com.insa.mygamelist.data.Games
 import com.insa.mygamelist.data.IGDB
 import com.insa.mygamelist.ui.theme.MyGamesListTheme
+import kotlinx.serialization.Serializable
 
 @OptIn(ExperimentalMaterial3Api::class)
 class MainActivity : ComponentActivity() {
 
+    @Serializable
+    object Home
+    // Define a profile route that takes a game id as a parameter
+    @Serializable
+    data class GamePage(val id: Long)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -62,7 +71,15 @@ class MainActivity : ComponentActivity() {
                         titleContentColor = Color.Black,
                     ), title = { Text("My Games List") })
                 }, modifier = Modifier.fillMaxSize()) { innerPadding ->
-                    DisplayAllGameCells(innerPadding, IGDB)
+                    val navController = rememberNavController()
+                    NavHost(navController, startDestination = Home) {
+                        composable<Home> {
+                            DisplayAllGameCells(innerPadding, IGDB)
+                        }
+                        /*composable(GamePage.serializer()) { page ->
+                            DisplayGamePage(page.id, innerPadding, IGDB)
+                        }*/
+                    }
                 }
             }
         }
@@ -77,8 +94,8 @@ class MainActivity : ComponentActivity() {
 
     @Composable
     fun DisplayAllGameCells(innerPadding: PaddingValues, igdb: IGDB) : Unit {
-        val coverModifier = getCoverModifier()
-        val boxModifier = getBoxModifier()
+        val coverModifier = Modifier.getCoverModifier()
+        val boxModifier = Modifier.getBoxModifier()
         LazyColumn (modifier=Modifier.padding(innerPadding)) {
             items(igdb.games) { game ->
                 val foundCover: Cover? = getPossibleCover(igdb.covers, game.cover)
@@ -106,19 +123,34 @@ class MainActivity : ComponentActivity() {
                                     textDecoration = TextDecoration.Underline,
                                 )
                                 Text(
-                                    text = "Genres : "+game.genres.toString(),
+                                    text = "Genres : "+getGenresString(game.genres, igdb),
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
                                 )
                             }
                         }
-                        /*Text(text = game.name)
-                        Text(text= "Genres : ")*/
                     }
             }
         }
     }
 
-    @Composable
-    fun getCoverModifier() : Modifier {
+    fun getGenresString(g : List<Long>, igdb : IGDB) : String {
+        var res : Array<String> = emptyArray()
+        g.forEach {
+            val id = it
+            val genreFound = igdb.genres.find {
+                it.id == id
+            }
+            genreFound?.let {
+                res += genreFound.name
+            }
+
+        }
+        return res.joinToString()
+    }
+
+    @Composable /* Need to be there for the remember function */
+    fun Modifier.getCoverModifier() : Modifier {
         val rainbowColorsBrush = remember { /* Colorful border for images. For cosmetic purposes only ! */
             Brush.sweepGradient(
                 listOf(
@@ -144,16 +176,19 @@ class MainActivity : ComponentActivity() {
                 RoundedCornerShape(8.dp)
             )
 
-        return coverModifier
+        return then(coverModifier)
     }
 
-    fun getBoxModifier(): Modifier {
+    fun Modifier.getBoxModifier(): Modifier {
         val boxModifier = Modifier
-            .padding(top=4.dp, end=4.dp)
+            .padding(top=4.dp, end=4.dp, start = 4.dp)
             .height(100.dp)
-            .background(Color.LightGray)
+            .border(
+                BorderStroke(1.dp, Color.Black),
+                RoundedCornerShape(8.dp),
+            ).padding(4.dp)
             .fillMaxWidth()
 
-        return boxModifier
+        return then(boxModifier)
     }
 }
