@@ -20,6 +20,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -41,17 +42,23 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.toRoute
 import coil3.compose.AsyncImage
 import com.insa.mygamelist.data.Cover
+import com.insa.mygamelist.data.Games
 import com.insa.mygamelist.data.IGDB
+import com.insa.mygamelist.data.Logo
 import com.insa.mygamelist.ui.theme.MyGamesListTheme
 import kotlinx.serialization.Serializable
 
@@ -129,9 +136,81 @@ class MainActivity : ComponentActivity() {
             }
     }
 
+    val getPossibleLogo: (List<Logo>, Long) -> (Logo?) = {
+            liste, id ->
+        liste.find { l ->
+            l.id == id
+        }
+    }
+
     @Composable
     fun DisplayGamePage(id : Long, innerPadding: PaddingValues, igdb: IGDB) : Unit {
-        Text("Game page for game $id", modifier = Modifier.padding(innerPadding))
+        val game : Games? = igdb.games.find {
+            it.id == id
+        }
+        game?.let {
+            Box(
+                modifier = Modifier
+                    .padding(innerPadding)
+                    .fillMaxSize()
+            ) {
+                Column (modifier = Modifier
+                        .padding(10.dp)
+                        .align(Alignment.TopCenter)
+                        .fillMaxWidth()) {
+                    Text(text=game.name, fontWeight = FontWeight.Bold, textDecoration = TextDecoration.Underline, modifier = Modifier.fillMaxWidth(), fontSize = 30.sp, textAlign = TextAlign.Center) /* Text align allows the text itself to be centered and not just the TEXT component */
+                    val foundCover: Cover? = getPossibleCover(igdb.covers, game.cover)
+                    foundCover?.let { /* If a cover is found, display it */
+                        AsyncImage(
+                            model = "https:" + foundCover.url, /* Add "https:" since it's not present in the JSON file */
+                            contentDescription = null,
+                            modifier = Modifier
+                                .padding(top=30.dp)
+                                .size(250.dp)
+                                .align(Alignment.CenterHorizontally)
+                        )
+                    } ?: run { /* Display "Missing" if cover not found (for fun) */
+                        Image(
+                            painter = painterResource(R.drawable.missing),
+                            contentDescription = "Not found",
+                            modifier = Modifier
+                                .padding(top=30.dp)
+                                .size(250.dp)
+                                .align(Alignment.CenterHorizontally)
+                        )
+                    }
+                    val genres : String = getGenresString(game.genres, igdb)
+                    Text(text=genres, modifier = Modifier.padding(10.dp).align(Alignment.CenterHorizontally), color = Color.Gray, fontStyle = FontStyle.Italic, fontSize = 15.sp)
+                    LazyRow (modifier = Modifier.align(Alignment.CenterHorizontally)) {
+                        items(game.platforms) { platform ->
+                            val foundPlatform = igdb.platforms.find {
+                                it.id == platform
+                            }
+                            foundPlatform?.let {
+                                val foundLogo: Logo? = getPossibleLogo(igdb.logos, it.platform_logo)
+                                foundLogo?.let {
+                                    AsyncImage(
+                                        model = "https:" + foundLogo.url,
+                                        contentDescription = null,
+                                        modifier = Modifier
+                                            .padding(10.dp)
+                                            .size(80.dp)
+                                    )
+                                }
+                            }
+
+                        }
+                    }
+                    LazyColumn (modifier = Modifier.align(Alignment.CenterHorizontally)) {
+                        item {
+                            Text(text=game.summary, modifier = Modifier.padding(10.dp), fontSize = 20.sp)
+                        }
+                    }
+                }
+            }
+        }?: run {
+            Text("Game not found", modifier = Modifier.padding(innerPadding))
+        }
     }
 
     @Composable
@@ -151,7 +230,7 @@ class MainActivity : ComponentActivity() {
                         } ?: run { /* Display "Missing" if cover not found (for fun) */
                             Image(
                                 painter = painterResource(R.drawable.missing),
-                                contentDescription = "Contact profile picture",
+                                contentDescription = "Not found",
                                 modifier = coverModifier
                             )
                         }
