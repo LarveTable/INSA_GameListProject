@@ -1,6 +1,7 @@
 package com.insa.mygamelist
 
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -13,6 +14,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -26,16 +28,21 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextField
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults.topAppBarColors
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -47,7 +54,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.compose.NavHost
@@ -88,11 +94,40 @@ class MainActivity : ComponentActivity() {
                 var backAction = remember { /* Action to perform */
                     {}
                 }
+                val searchIcon = remember {
+                    mutableStateOf(true)
+                }
+                val searchBar = remember {
+                    mutableStateOf(false)
+                }
+                val query = remember {
+                    mutableStateOf("")
+                }
                 Scaffold(topBar = {
                     TopAppBar(colors = topAppBarColors(
                         containerColor = Color.Magenta,
                         titleContentColor = Color.Black,
-                    ), title = { Text(text=title.value) },
+                    ), title = {
+                        if (searchBar.value) {
+                            Box(modifier = Modifier
+                                .fillMaxWidth()
+                                .fillMaxHeight()
+                            ) {
+                                TextField(
+                                    modifier = Modifier
+                                        .align(Alignment.CenterStart)
+                                        .padding(5.dp)
+                                        .clip(CircleShape)
+                                        .fillMaxWidth(),
+                                    value = query.value,
+                                    placeholder = { Text("Search") },
+                                    onValueChange = { query.value = it }
+                                )
+                            }
+                        }
+                        else {
+                            Text(text = title.value)
+                        } },
                         navigationIcon = {
                             if (back.value) {
                                 IconButton(onClick = backAction) {
@@ -102,6 +137,24 @@ class MainActivity : ComponentActivity() {
                                     )
                                 }
                             }
+                        },
+                        actions = {
+                            if (searchIcon.value)
+                            IconButton(onClick = {
+                                if (!searchBar.value) {
+                                    searchBar.value = true
+                                    title.value = ""
+                                }
+                                else {
+                                    searchBar.value = false
+                                    title.value = "My Games List"
+                                }
+                                    }) {
+                                Icon(
+                                    imageVector = Icons.Default.Search, /* Search icon */
+                                    contentDescription = "Search bar"
+                                )
+                            }
                         }
                     )
                 }, modifier = Modifier.fillMaxSize()) { innerPadding ->
@@ -110,14 +163,20 @@ class MainActivity : ComponentActivity() {
                         composable<Home> {
                             title.value = "My Games List"
                             back.value = false
+                            searchIcon.value = true
+                            if (query.value != "") {
+                                searchBar.value = true
+                            }
                             DisplayAllGameCells(innerPadding, IGDB, onNavigateToGamePage = { id : Long, name : String ->
                                 navController.navigate(GamePage(id, name)) /* On passe une fonction à la page principale pour naviguer sur les pages des jeux */
-                            } )
+                            }, query)
                         }
                         composable<GamePage> { backStackEntry ->
                             val game : GamePage = backStackEntry.toRoute()
                             title.value = game.name
                             back.value = true
+                            searchIcon.value = false
+                            searchBar.value = false
                             backAction = {
                                 navController.popBackStack()
                             }
@@ -155,9 +214,9 @@ class MainActivity : ComponentActivity() {
                     .fillMaxSize()
             ) {
                 Column (modifier = Modifier
-                        .padding(10.dp)
-                        .align(Alignment.TopCenter)
-                        .fillMaxWidth()) {
+                    .padding(10.dp)
+                    .align(Alignment.TopCenter)
+                    .fillMaxWidth()) {
                     Text(text=game.name, fontWeight = FontWeight.Bold, textDecoration = TextDecoration.Underline, modifier = Modifier.fillMaxWidth(), fontSize = 30.sp, textAlign = TextAlign.Center) /* Text align allows the text itself to be centered and not just the TEXT component */
                     val foundCover: Cover? = getPossibleCover(igdb.covers, game.cover)
                     foundCover?.let { /* If a cover is found, display it */
@@ -165,7 +224,7 @@ class MainActivity : ComponentActivity() {
                             model = "https:" + foundCover.url, /* Add "https:" since it's not present in the JSON file */
                             contentDescription = null,
                             modifier = Modifier
-                                .padding(top=30.dp)
+                                .padding(top = 30.dp)
                                 .size(250.dp)
                                 .align(Alignment.CenterHorizontally)
                         )
@@ -174,13 +233,15 @@ class MainActivity : ComponentActivity() {
                             painter = painterResource(R.drawable.missing),
                             contentDescription = "Not found",
                             modifier = Modifier
-                                .padding(top=30.dp)
+                                .padding(top = 30.dp)
                                 .size(250.dp)
                                 .align(Alignment.CenterHorizontally)
                         )
                     }
                     val genres : String = getGenresString(game.genres, igdb)
-                    Text(text=genres, modifier = Modifier.padding(10.dp).align(Alignment.CenterHorizontally), color = Color.Gray, fontStyle = FontStyle.Italic, fontSize = 15.sp)
+                    Text(text=genres, modifier = Modifier
+                        .padding(10.dp)
+                        .align(Alignment.CenterHorizontally), color = Color.Gray, fontStyle = FontStyle.Italic, fontSize = 15.sp)
                     LazyRow (modifier = Modifier.align(Alignment.CenterHorizontally)) {
                         items(game.platforms) { platform ->
                             val foundPlatform = igdb.platforms.find {
@@ -214,43 +275,79 @@ class MainActivity : ComponentActivity() {
     }
 
     @Composable
-    fun DisplayAllGameCells(innerPadding: PaddingValues, igdb: IGDB, onNavigateToGamePage: (Long, String) -> Unit ) : Unit {
+    fun DisplayAllGameCells(innerPadding: PaddingValues, igdb: IGDB, onNavigateToGamePage: (Long, String) -> Unit, query : MutableState<String>) : Unit {
         val coverModifier = Modifier.getCoverModifier()
         val boxModifier = Modifier.getBoxModifier()
-        LazyColumn (modifier=Modifier.padding(innerPadding)) {
-            items(igdb.games) { game ->
-                val foundCover: Cover? = getPossibleCover(igdb.covers, game.cover)
-                    Row {
-                        foundCover?.let { /* If a cover is found, display it */
-                            AsyncImage(
-                                model = "https:" + foundCover.url, /* Add "https:" since it's not present in the JSON file */
-                                contentDescription = null,
-                                modifier = coverModifier
-                            )
-                        } ?: run { /* Display "Missing" if cover not found (for fun) */
-                            Image(
-                                painter = painterResource(R.drawable.missing),
-                                contentDescription = "Not found",
-                                modifier = coverModifier
-                            )
-                        }
-                        Box(
-                            modifier = boxModifier.clickable(onClick = { onNavigateToGamePage(game.id, game.name) })
-                        ) {
-                            Column (modifier = Modifier.align(Alignment.CenterStart)) {
-                                Text(
-                                    text = game.name,
-                                    fontWeight = FontWeight.Bold,
-                                    textDecoration = TextDecoration.Underline,
+        if (igdb.games.all { game -> /*Dégeu à modif*/
+                !game.name.contains(
+                    query.value,
+                    ignoreCase = true
+                ) and !getGenresString(game.genres, igdb).contains(
+                    query.value,
+                    ignoreCase = true
+                ) and !getPlatformsString(game.platforms, igdb).contains(
+                    query.value,
+                    ignoreCase = true
+                )
+            }) {
+            Box(modifier = Modifier
+                .fillMaxSize()) {
+                Text(text="No match ;(", color = Color.LightGray, modifier = Modifier.align(Alignment.Center), fontSize = 30.sp)
+            }
+        }
+        else {
+            LazyColumn(modifier = Modifier.padding(innerPadding)) {
+                items(igdb.games) { game ->
+                    if (game.name.contains(
+                            query.value,
+                            ignoreCase = true
+                        ) or getGenresString(game.genres, igdb).contains(
+                            query.value,
+                            ignoreCase = true
+                        ) or getPlatformsString(game.platforms, igdb).contains(
+                            query.value,
+                            ignoreCase = true
+                        )
+                    ) {
+                        val foundCover: Cover? = getPossibleCover(igdb.covers, game.cover)
+                        Row {
+                            foundCover?.let { /* If a cover is found, display it */
+                                AsyncImage(
+                                    model = "https:" + foundCover.url, /* Add "https:" since it's not present in the JSON file */
+                                    contentDescription = null,
+                                    modifier = coverModifier
                                 )
-                                Text(
-                                    text = "Genres : "+getGenresString(game.genres, igdb),
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis
+                            } ?: run { /* Display "Missing" if cover not found (for fun) */
+                                Image(
+                                    painter = painterResource(R.drawable.missing),
+                                    contentDescription = "Not found",
+                                    modifier = coverModifier
                                 )
+                            }
+                            Box(
+                                modifier = boxModifier.clickable(onClick = {
+                                    onNavigateToGamePage(
+                                        game.id,
+                                        game.name
+                                    )
+                                })
+                            ) {
+                                Column(modifier = Modifier.align(Alignment.CenterStart)) {
+                                    Text(
+                                        text = game.name,
+                                        fontWeight = FontWeight.Bold,
+                                        textDecoration = TextDecoration.Underline,
+                                    )
+                                    Text(
+                                        text = "Genres : " + getGenresString(game.genres, igdb),
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                }
                             }
                         }
                     }
+                }
             }
         }
     }
@@ -268,6 +365,20 @@ class MainActivity : ComponentActivity() {
 
         }
         return res.joinToString()
+    }
+
+    fun getPlatformsString(platforms : List<Long>, igdb : IGDB) : String {
+        var res : String = ""
+        platforms.forEach {
+            val platform = it
+            val foundPlatform = igdb.platforms.find {
+                it.id == platform
+            }
+            foundPlatform?.let {
+                res += foundPlatform.name + " "
+            }
+        }
+        return res
     }
 
     @Composable /* Need to be there for the remember function */
