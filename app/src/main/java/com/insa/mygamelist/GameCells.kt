@@ -1,5 +1,6 @@
 package com.insa.mygamelist
 
+import android.util.Log
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -16,6 +17,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -29,10 +31,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.insa.mygamelist.data.Cover
 import com.insa.mygamelist.data.Games
 import com.insa.mygamelist.data.IGDB
@@ -77,18 +81,55 @@ fun GameCells(controller: MyController, viewModel: GameListViewModel) {
             }
         )
     }, modifier = Modifier.fillMaxSize()) { innerPadding ->
-        GenerateCells(innerPadding, viewModel.repository.igdb, viewModel.searchQuery.value, controller, viewModel)
+        if (viewModel.isLoading.value) {
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                Column{
+                    CircularProgressIndicator(modifier = Modifier.align(Alignment.CenterHorizontally))
+                    Text(
+                        text = "Fetching games...",
+                        modifier = Modifier.padding(top = 20.dp).align(Alignment.CenterHorizontally),
+                        fontSize = 20.sp,
+                        color = Color.Gray
+                    )
+                }
+            }
+        }
+        else {
+            GenerateCells(
+                innerPadding,
+                viewModel.repository.igdb,
+                viewModel.searchQuery.value,
+                controller,
+                viewModel
+            )
+        }
     }
 }
 
 @Composable
 fun GenerateCells(innerPadding : PaddingValues, igdb : IGDB, searchQuery : String, controller: MyController, viewModel: GameListViewModel) {
-    LazyColumn(modifier = Modifier.padding(innerPadding)) {
-        /* For each game found, scrape the cover (if it exists) and generate the cell */
-        items(igdb.games) { game ->
-            if (checkQueryMatch(game, igdb, searchQuery)) {
-                val foundCover: Cover? = getPossibleCover(igdb.covers, game.cover)
-                GenerateRow(game, igdb, controller, viewModel, foundCover)
+    /* If no game is found matching the query, display "No match ;(" */
+    if (!matchOrNot(igdb, searchQuery)) {
+        /* Centered Box item with text "No match ;(" italic grey */
+        Box(modifier = Modifier.fillMaxSize()) {
+            Text(
+                text = "No match ;(",
+                color = Color.Gray,
+                fontStyle = FontStyle.Italic,
+                modifier = Modifier.align(Alignment.Center),
+                fontSize = 30.sp
+            )
+        }
+    }
+    else {
+        LazyColumn(modifier = Modifier.padding(innerPadding)) {
+            /* For each game found, scrape the cover (if it exists) and generate the cell */
+            items(igdb.games) { game ->
+                if (checkQueryMatch(game, igdb, searchQuery)) {
+                    Log.d("zozo", igdb.covers.toString())
+                    val foundCover: Cover? = getPossibleCover(igdb.covers, game.cover)
+                    GenerateRow(game, igdb, controller, viewModel, foundCover)
+                }
             }
         }
     }
@@ -154,4 +195,13 @@ fun FavoriteIconCells(viewModel: GameListViewModel, game: Games) {
             contentDescription = "Favorite"
         )
     }
+}
+
+fun matchOrNot(igdb: IGDB, searchQuery: String) : Boolean {
+    for (game in igdb.games) {
+        if (checkQueryMatch(game, igdb, searchQuery)) {
+            return true
+        }
+    }
+    return false
 }

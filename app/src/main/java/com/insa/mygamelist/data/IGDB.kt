@@ -4,7 +4,7 @@ import android.content.Context
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import com.insa.mygamelist.R
-import kotlinx.serialization.Contextual
+import kotlinx.serialization.Serializable
 
 object IGDB {
 
@@ -44,15 +44,20 @@ object IGDB {
     }
 }
 
+@Serializable
 data class Cover(val id: Long, val url: String)
+@Serializable
 data class Games(val id: Long,
                  val cover: Long,
-                val first_release_date: Long,
+                val first_release_date: Long = -1,
                 val genres: List<Long>,
                 val name: String,
                 val platforms: List<Long>,
-                val summary: String,
-                val total_rating: Float)
+                val summary: String = "No summary available",
+                val total_rating: Float = -1f)
+@Serializable
 data class Genre(val id: Long, val name: String)
+@Serializable
 data class Logo(val id: Long, val url: String)
+@Serializable
 data class Platform(val id: Long, val name: String, val platform_logo: Long)

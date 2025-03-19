@@ -3,6 +3,7 @@ package com.insa.mygamelist
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -14,6 +15,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
@@ -88,7 +90,7 @@ fun Modifier.getCoverModifier() : Modifier {
         .width(80.dp)
         .clip(RoundedCornerShape(8.dp))
         .border(
-            BorderStroke(4.dp, Brush.verticalGradient(listOf(Color.Magenta, Color.Blue))),
+            BorderStroke(4.dp, Brush.verticalGradient(listOf(Color.Magenta, Color.Yellow))),
             RoundedCornerShape(8.dp)
         )
 
@@ -132,11 +134,14 @@ fun MissingCover(context : String) {
 @Composable
 fun GetCover(foundCover: Cover, context : String) {
     if (context == "cells") {
-        AsyncImage(
-            model = "https:" + foundCover.url, /* Add "https:" since it's not present in the JSON file */
-            contentDescription = null,
-            modifier = Modifier.getCoverModifier()
-        )
+        Box(modifier = Modifier.getCoverModifier()){
+            AsyncImage(
+                model = "https:" + foundCover.url, /* Add "https:" since it's not present in the JSON file */
+                contentDescription = null,
+                contentScale = ContentScale.FillHeight,
+                modifier = Modifier.fillMaxSize()
+            )
+        }
     }
     else if (context == "page") {
         AsyncImage(
