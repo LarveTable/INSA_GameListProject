@@ -23,7 +23,7 @@ Le TP 4 était relativement court car il était surtout question de reproduire l
 
 ## TP5
 
-Pas de commentaires particuliers pour le TP5, l'ensembles des fonctionnalités demandées fonctionne.
+Pas de commentaires particuliers pour le TP5, l'ensemble des fonctionnalités demandées fonctionne.
 
 ## TP6
 
